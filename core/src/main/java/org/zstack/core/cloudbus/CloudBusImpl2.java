@@ -105,6 +105,7 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
     private final long DEFAULT_MESSAGE_TIMEOUT = TimeUnit.MINUTES.toMillis(30);
     private final String DEAD_LETTER = "dead-message";
     private final String API_ID = "api-id";
+    private final String TASK_STACK = "task-stack";
 
     private final String AMQP_PROPERTY_HEADER__COMPRESSED = "compressed";
 
@@ -554,11 +555,12 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
 
             buildSchema(msg);
 
+            evalThreadContextToMessage(msg);
+
             if (logger.isTraceEnabled() && logMessage(msg)) {
                 logger.trace(String.format("[msg send]: %s", wire.dumpMessage(msg)));
             }
 
-            evalThreadContextToMessage(msg);
 
             Channel chan = channelPool.acquire();
             try {
@@ -1954,12 +1956,22 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
         } else if (msg.getHeaders().containsKey(API_ID)){
             ThreadContext.put("api", msg.getHeaders().get(API_ID).toString());
         }
+
+        if (msg.getHeaders().containsKey(TASK_STACK)) {
+            List<String> taskStack = msg.getHeaderEntry(TASK_STACK);
+            ThreadContext.setStack(taskStack);
+        }
     }
 
     private void evalThreadContextToMessage(Message msg) {
         String apiId = ThreadContext.get("api");
         if (apiId != null) {
             msg.putHeaderEntry(API_ID, apiId);
+        }
+
+        List<String> taskStack = ThreadContext.getImmutableStack().asList();
+        if (taskStack != null && !taskStack.isEmpty()) {
+            msg.putHeaderEntry(TASK_STACK, taskStack);
         }
     }
 

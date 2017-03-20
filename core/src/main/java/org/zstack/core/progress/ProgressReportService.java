@@ -1,5 +1,6 @@
 package org.zstack.core.progress;
 
+import org.apache.logging.log4j.ThreadContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.zstack.core.cloudbus.CloudBus;
@@ -233,5 +234,15 @@ public class ProgressReportService extends AbstractService implements Management
             reply.setResourceUuid(vo.getResourceUuid());
         }
         bus.reply(msg, reply);
+    }
+
+    public static SubTask startSubTask(String uuid) {
+        ThreadContext.push(uuid);
+        return new SubTask() {
+            @Override
+            public void stop() {
+                ThreadContext.pop();
+            }
+        };
     }
 }
