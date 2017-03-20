@@ -28,7 +28,6 @@ import org.zstack.header.configuration.InstanceOfferingInventory;
 import org.zstack.header.configuration.InstanceOfferingVO;
 import org.zstack.header.core.NoErrorCompletion;
 import org.zstack.header.core.ReturnValueCompletion;
-import org.zstack.header.core.progress.SubTask;
 import org.zstack.header.core.workflow.Flow;
 import org.zstack.header.core.workflow.FlowChain;
 import org.zstack.header.errorcode.ErrorCode;
@@ -81,7 +80,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.zstack.core.progress.ProgressReportService.startSubTask;
 import static org.zstack.utils.CollectionDSL.e;
 import static org.zstack.utils.CollectionDSL.map;
 
@@ -696,9 +694,8 @@ public class VirtualRouterManagerImpl extends AbstractService implements Virtual
         msg.setProviderType(struct.getProviderType());
         msg.setApplianceVmType(struct.getApplianceVmType());
         msg.setApplianceVmAgentPort(struct.getApplianceVmAgentPort());
+        msg.asSubTask();
         bus.makeTargetServiceIdByResourceUuid(msg, VirtualRouterConstant.SERVICE_ID, l3Nw.getUuid());
-
-        SubTask st = startSubTask(msg.getId());
         bus.send(msg, new CloudBusCallBack(completion) {
             @Override
             public void run(MessageReply reply) {

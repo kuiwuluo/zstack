@@ -1955,11 +1955,15 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
             ThreadContext.put("api", msg.getId());
         } else if (msg.getHeaders().containsKey(API_ID)){
             ThreadContext.put("api", msg.getHeaders().get(API_ID).toString());
+        } else {
+            ThreadContext.clearMap();
         }
 
         if (msg.getHeaders().containsKey(TASK_STACK)) {
             List<String> taskStack = msg.getHeaderEntry(TASK_STACK);
             ThreadContext.setStack(taskStack);
+        } else {
+            ThreadContext.clearStack();
         }
     }
 
@@ -2000,8 +2004,6 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
                         try {
                             final Message msg = wire.toMessage(bytes, basicProperties);
 
-                            setThreadLoggingContext(msg);
-
                             if (logger.isTraceEnabled() && wire.logMessage(msg)) {
                                 logger.trace(String.format("[msg received]: %s", wire.dumpMessage(msg)));
                             }
@@ -2024,6 +2026,8 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
 
                                 @Override
                                 public Void call() throws Exception {
+                                    setThreadLoggingContext(msg);
+
                                     try {
                                         List<BeforeDeliveryMessageInterceptor> is = beforeDeliveryMessageInterceptors.get(msg.getClass());
                                         if (is != null) {

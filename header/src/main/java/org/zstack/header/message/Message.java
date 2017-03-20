@@ -52,6 +52,10 @@ public abstract class Message implements Serializable, AsyncBackup {
         id = uuid();
     }
 
+    public void asSubTask() {
+        ThreadContext.push(getId());
+    }
+
     public Map<String, Object> getHeaders() {
         return headers;
     }

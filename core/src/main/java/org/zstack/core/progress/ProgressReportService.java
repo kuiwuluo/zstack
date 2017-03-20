@@ -235,14 +235,4 @@ public class ProgressReportService extends AbstractService implements Management
         }
         bus.reply(msg, reply);
     }
-
-    public static SubTask startSubTask(String uuid) {
-        ThreadContext.push(uuid);
-        return new SubTask() {
-            @Override
-            public void stop() {
-                ThreadContext.pop();
-            }
-        };
-    }
 }

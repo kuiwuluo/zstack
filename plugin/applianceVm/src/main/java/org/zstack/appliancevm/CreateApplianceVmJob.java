@@ -114,6 +114,7 @@ public class CreateApplianceVmJob implements Job {
         msg.setL3NetworkUuids(nws);
         msg.setVmInstanceInventory(inv);
         msg.setApplianceVmSpec(spec);
+        msg.asSubTask();
         bus.makeTargetServiceIdByResourceUuid(msg, VmInstanceConstant.SERVICE_ID, inv.getUuid());
         final ApplianceVmVO finalAvo = avo;
         bus.send(msg, new CloudBusCallBack(complete) {
