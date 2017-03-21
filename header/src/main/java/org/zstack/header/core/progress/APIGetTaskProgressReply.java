@@ -8,7 +8,8 @@ import java.sql.Timestamp;
  * Created by mingjian.deng on 16/12/8.
  */
 @RestResponse(fieldsTo = {"all"})
-public class APIGetTaskProgressReply extends APIReply {private String progress;
+public class APIGetTaskProgressReply extends APIReply {
+    private String progress;
     private String resourceUuid;
     private String processType;
     private Timestamp createDate;

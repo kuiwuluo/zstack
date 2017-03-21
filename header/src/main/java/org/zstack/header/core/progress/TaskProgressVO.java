@@ -1,7 +1,6 @@
 package org.zstack.header.core.progress;
 
 import org.zstack.header.managementnode.ManagementNodeVO;
-import org.zstack.header.vo.*;
 
 import javax.persistence.*;
 

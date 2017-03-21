@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.transaction.annotation.Transactional;
 import org.zstack.core.Platform;
+import org.zstack.core.db.SQL;
 import org.zstack.core.db.SimpleQuery;
 import org.zstack.core.db.SimpleQuery.Op;
 import org.zstack.core.thread.AsyncThread;
@@ -12,6 +13,7 @@ import org.zstack.core.thread.ChainTask;
 import org.zstack.core.thread.SyncTaskChain;
 import org.zstack.core.workflow.FlowChainBuilder;
 import org.zstack.core.workflow.ShareFlow;
+import org.zstack.header.HasThreadContext;
 import org.zstack.header.core.*;
 import org.zstack.header.core.progress.ProgressConstants;
 import org.zstack.header.core.progress.ProgressVO;
@@ -21,9 +23,7 @@ import org.zstack.header.errorcode.ErrorCode;
 import org.zstack.header.errorcode.OperationFailureException;
 import org.zstack.header.errorcode.SysErrors;
 import org.zstack.header.exception.CloudRuntimeException;
-import org.zstack.header.image.APIAddImageMsg;
-import org.zstack.header.image.ImageBackupStorageRefInventory;
-import org.zstack.header.image.ImageInventory;
+import org.zstack.header.image.*;
 import org.zstack.header.message.APIMessage;
 import org.zstack.header.message.Message;
 import org.zstack.header.rest.RESTFacade;
@@ -162,7 +162,7 @@ public class CephBackupStorageBase extends BackupStorageBase {
     }
 
     @ApiTimeout(apiClasses = {APIAddImageMsg.class})
-    public static class DownloadCmd extends AgentCommand {
+    public static class DownloadCmd extends AgentCommand implements HasThreadContext {
         String url;
         String installPath;
         String imageUuid;
@@ -639,7 +639,6 @@ public class CephBackupStorageBase extends BackupStorageBase {
 
 
     @Override
-    @Transactional
     protected void handle(final DownloadImageMsg msg) {
         final DownloadCmd cmd = new DownloadCmd();
         cmd.url = msg.getImageInventory().getUrl();
@@ -647,14 +646,11 @@ public class CephBackupStorageBase extends BackupStorageBase {
         cmd.imageUuid = msg.getImageInventory().getUuid();
         cmd.sendCommandUrl = restf.getSendCommandUrl();
 
-        String sql = "update ImageBackupStorageRefVO set installPath = :installPath " +
-                "where backupStorageUuid = :bsUuid and imageUuid = :imageUuid";
-        Query q = dbf.getEntityManager().createQuery(sql);
-        q.setParameter("installPath", cmd.installPath);
-        q.setParameter("bsUuid", msg.getBackupStorageUuid());
-        q.setParameter("imageUuid", msg.getImageInventory().getUuid());
-        q.executeUpdate();
-
+        SQL.New(ImageBackupStorageRefVO.class)
+                .set(ImageBackupStorageRefVO_.installPath, cmd.installPath)
+                .set(ImageBackupStorageRefVO_.backupStorageUuid, msg.getBackupStorageUuid())
+                .set(ImageBackupStorageRefVO_.imageUuid, msg.getImageInventory().getUuid())
+                .update();
 
         final DownloadImageReply reply = new DownloadImageReply();
         httpCall(DOWNLOAD_IMAGE_PATH, cmd, DownloadRsp.class, new ReturnValueCompletion<DownloadRsp>(msg) {
