@@ -20,7 +20,6 @@ import org.zstack.header.core.*;
 import org.zstack.header.core.workflow.*;
 import org.zstack.header.errorcode.ErrorCode;
 import org.zstack.header.errorcode.OperationFailureException;
-import org.zstack.header.errorcode.SysErrors;
 import org.zstack.header.exception.CloudRuntimeException;
 import org.zstack.header.host.HostConstant;
 import org.zstack.header.host.HostStatus;
@@ -710,7 +709,7 @@ public class CephPrimaryStorageBase extends PrimaryStorageBase {
 
         abstract void upload(ReturnValueCompletion<String> completion);
 
-        abstract boolean deleteWhenRollabackDownload();
+        abstract boolean deleteWhenRollbackDownload();
     }
 
     class SftpBackupStorageMediator extends BackupStorageMediator {
@@ -921,7 +920,7 @@ public class CephPrimaryStorageBase extends PrimaryStorageBase {
         }
 
         @Override
-        boolean deleteWhenRollabackDownload() {
+        boolean deleteWhenRollbackDownload() {
             return true;
         }
     }
@@ -1045,7 +1044,7 @@ public class CephPrimaryStorageBase extends PrimaryStorageBase {
         }
 
         @Override
-        boolean deleteWhenRollabackDownload() {
+        boolean deleteWhenRollbackDownload() {
             return false;
         }
     }
@@ -1225,7 +1224,7 @@ public class CephPrimaryStorageBase extends PrimaryStorageBase {
                             BackupStorageMediator mediator = getBackupStorageMediator(image.getSelectedBackupStorage().getBackupStorageUuid());
                             mediator.param = param;
 
-                            deleteOnRollback = mediator.deleteWhenRollabackDownload();
+                            deleteOnRollback = mediator.deleteWhenRollbackDownload();
                             mediator.download(new ReturnValueCompletion<String>(trigger) {
                                 @Override
                                 public void success(String path) {

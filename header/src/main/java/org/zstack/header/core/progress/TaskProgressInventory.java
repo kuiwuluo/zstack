@@ -1,6 +1,5 @@
 package org.zstack.header.core.progress;
 
-import org.zstack.header.search.Inventory;
 import org.zstack.utils.gson.JSONObjectUtil;
 
 import java.util.ArrayList;
@@ -11,7 +10,6 @@ import java.util.List;
 /**
  * Created by xing5 on 2017/3/20.
  */
-@Inventory(mappingVOClass = TaskProgressVO.class)
 public class TaskProgressInventory {
     private String taskUuid;
     private String parentUuid;
@@ -19,26 +17,27 @@ public class TaskProgressInventory {
     private String content;
     private LinkedHashMap opaque;
     private Long time;
+    private List<TaskProgressInventory> subTasks;
 
-    public static TaskProgressInventory valueOf(TaskProgressVO vo) {
-        TaskProgressInventory inv = new TaskProgressInventory();
-        inv.setTaskUuid(vo.getTaskUuid());
-        inv.setParentUuid(vo.getParentUuid());
-        inv.setType(vo.getType().toString());
-        inv.setContent(vo.getContent());
-        if (vo.getOpaque() != null) {
-            inv.setOpaque(JSONObjectUtil.toObject(vo.getOpaque(), LinkedHashMap.class));
-        }
-        inv.setTime(vo.getTime());
-        return inv;
+    public TaskProgressInventory() {
     }
 
-    public static List<TaskProgressInventory> valueOf(Collection<TaskProgressVO> vos) {
-        List<TaskProgressInventory> invs = new ArrayList<>();
-        for (TaskProgressVO vo : vos) {
-            invs.add(valueOf(vo));
+    public TaskProgressInventory(TaskProgressVO vo) {
+        taskUuid = vo.getTaskUuid();
+        parentUuid = vo.getParentUuid();
+        type = vo.getType().toString();
+        if (vo.getOpaque() != null) {
+            opaque = JSONObjectUtil.toObject(vo.getOpaque(), LinkedHashMap.class);
         }
-        return invs;
+        time = vo.getTime();
+    }
+
+    public List<TaskProgressInventory> getSubTasks() {
+        return subTasks;
+    }
+
+    public void setSubTasks(List<TaskProgressInventory> subTasks) {
+        this.subTasks = subTasks;
     }
 
     public String getTaskUuid() {

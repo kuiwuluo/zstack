@@ -27,8 +27,6 @@ import static org.zstack.core.Platform.operr;
 
 import java.util.List;
 
-import static java.util.Arrays.asList;
-
 
 /**
  * Created by mingjian.deng on 16/12/10.
@@ -47,6 +45,16 @@ public class ProgressReportService extends AbstractService implements Management
     @Autowired
     private CloudBus bus;
 
+    private void setThreadContext(ProgressReportCmd cmd) {
+        ThreadContext.clearAll();
+        if (cmd.getThreadContextMap() != null) {
+            ThreadContext.putAll(cmd.getThreadContextMap());
+        }
+        if (cmd.getThreadContextStack() != null) {
+            ThreadContext.setStack(cmd.getThreadContextStack());
+        }
+    }
+
     @Override
     public boolean start() {
         restf.registerSyncHttpCallHandler(ProgressConstants.PROGRESS_START_PATH, ProgressReportCmd.class, new SyncHttpCallHandler<ProgressReportCmd>() {
@@ -62,9 +70,12 @@ public class ProgressReportService extends AbstractService implements Management
         restf.registerSyncHttpCallHandler(ProgressConstants.PROGRESS_REPORT_PATH, ProgressReportCmd.class, new SyncHttpCallHandler<ProgressReportCmd>() {
             @Override
             public String handleSyncHttpCall(ProgressReportCmd cmd) {
+                setThreadContext(cmd);
+                taskProgress(TaskType.Progress, cmd.getProgress());
+
                 //TODO
                 logger.debug(String.format("call PROGRESS_REPORT_PATH by %s, uuid: %s", cmd.getProcessType(), cmd.getResourceUuid()));
-                process(cmd);
+                //process(cmd);
                 return null;
             }
         });
@@ -204,8 +215,8 @@ public class ProgressReportService extends AbstractService implements Management
 
     private void handleApiMessage(APIMessage msg) {
         try {
-            if (msg instanceof APIGetTaskProgressMsg) {
-                handle((APIGetTaskProgressMsg) msg);
+            if (msg instanceof APIGetTaskProgressMsg1) {
+                handle((APIGetTaskProgressMsg1) msg);
             } else {
                 bus.dealWithUnknownMessage(msg);
             }
@@ -219,8 +230,8 @@ public class ProgressReportService extends AbstractService implements Management
         bus.dealWithUnknownMessage(msg);
     }
 
-    private void handle(APIGetTaskProgressMsg msg) {
-        APIGetTaskProgressReply reply = new APIGetTaskProgressReply();
+    private void handle(APIGetTaskProgressMsg1 msg) {
+        APIGetTaskProgressReply1 reply = new APIGetTaskProgressReply1();
         SimpleQuery<ProgressVO> q = dbf.createQuery(ProgressVO.class);
         q.add(ProgressVO_.resourceUuid, SimpleQuery.Op.EQ, msg.getResourceUuid());
         if (msg.getProcessType() != null) {
@@ -289,7 +300,7 @@ public class ProgressReportService extends AbstractService implements Management
         Platform.getComponentLoader().getComponent(DatabaseFacade.class).persist(vo);
     }
 
-    public static void taskProgress(String fmt, Object...args) {
+    private static void taskProgress(TaskType type, String fmt, Object...args) {
         if (!ThreadContext.containsKey(Constants.THREAD_CONTEXT_API)) {
             if (args != null) {
                 logger.warn(String.format("no task uuid found for:" + fmt, args));
@@ -312,9 +323,13 @@ public class ProgressReportService extends AbstractService implements Management
         if (args != null) {
             vo.setArguments(JSONObjectUtil.toJsonString(args));
         }
-        vo.setType(TaskType.Task);
+        vo.setType(type);
         vo.setTime(System.currentTimeMillis());
 
         Platform.getComponentLoader().getComponent(DatabaseFacade.class).persist(vo);
+    }
+
+    public static void taskProgress(String fmt, Object...args) {
+        taskProgress(TaskType.Task, fmt, args);
     }
 }

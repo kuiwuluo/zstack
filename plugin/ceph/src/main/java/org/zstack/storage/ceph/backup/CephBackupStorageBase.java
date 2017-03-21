@@ -654,32 +654,14 @@ public class CephBackupStorageBase extends BackupStorageBase {
 
         final DownloadImageReply reply = new DownloadImageReply();
         httpCall(DOWNLOAD_IMAGE_PATH, cmd, DownloadRsp.class, new ReturnValueCompletion<DownloadRsp>(msg) {
-            @Transactional
-            private void deleteProgress(){
-                SimpleQuery<ProgressVO> q = dbf.createQuery(ProgressVO.class);
-                q.add(ProgressVO_.processType, SimpleQuery.Op.EQ, ProgressConstants.ProgressType.AddImage.toString());
-                q.add(ProgressVO_.resourceUuid, SimpleQuery.Op.EQ, msg.getImageInventory().getUuid());
-                List<ProgressVO> list = q.list();
-                if (list.size() > 0) {
-                    for (ProgressVO p : list) {
-                        try {
-                            dbf.remove(p);
-                        } catch (Exception e) {
-                            logger.warn("no need delete, it was deleted...");
-                        }
-                    }
-                }
-            }
             @Override
             public void fail(ErrorCode err) {
-                deleteProgress();
                 reply.setError(err);
                 bus.reply(msg, reply);
             }
 
             @Override
             public void success(DownloadRsp ret) {
-                deleteProgress();
                 reply.setInstallPath(cmd.installPath);
                 reply.setSize(ret.size);
 
