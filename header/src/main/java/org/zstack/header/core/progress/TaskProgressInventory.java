@@ -14,9 +14,7 @@ import java.util.List;
 @Inventory(mappingVOClass = TaskProgressVO.class)
 public class TaskProgressInventory {
     private String taskUuid;
-    private String taskName;
     private String parentUuid;
-    private String subTaskUuid;
     private String type;
     private String content;
     private LinkedHashMap opaque;
@@ -25,9 +23,7 @@ public class TaskProgressInventory {
     public static TaskProgressInventory valueOf(TaskProgressVO vo) {
         TaskProgressInventory inv = new TaskProgressInventory();
         inv.setTaskUuid(vo.getTaskUuid());
-        inv.setTaskName(vo.getTaskName());
         inv.setParentUuid(vo.getParentUuid());
-        inv.setSubTaskUuid(vo.getSubTaskUuid());
         inv.setType(vo.getType().toString());
         inv.setContent(vo.getContent());
         if (vo.getOpaque() != null) {
@@ -53,28 +49,12 @@ public class TaskProgressInventory {
         this.taskUuid = taskUuid;
     }
 
-    public String getTaskName() {
-        return taskName;
-    }
-
-    public void setTaskName(String taskName) {
-        this.taskName = taskName;
-    }
-
     public String getParentUuid() {
         return parentUuid;
     }
 
     public void setParentUuid(String parentUuid) {
         this.parentUuid = parentUuid;
-    }
-
-    public String getSubTaskUuid() {
-        return subTaskUuid;
-    }
-
-    public void setSubTaskUuid(String subTaskUuid) {
-        this.subTaskUuid = subTaskUuid;
     }
 
     public String getType() {

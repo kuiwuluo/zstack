@@ -16,6 +16,7 @@ import org.zstack.core.jmx.JmxFacade;
 import org.zstack.core.thread.*;
 import org.zstack.core.thread.ThreadFacadeImpl.TimeoutTaskReceipt;
 import org.zstack.core.timeout.ApiTimeoutManager;
+import org.zstack.header.Constants;
 import org.zstack.header.Service;
 import org.zstack.header.apimediator.APIIsReadyToGoMsg;
 import org.zstack.header.apimediator.APIIsReadyToGoReply;
@@ -1952,9 +1953,9 @@ public class CloudBusImpl2 implements CloudBus, CloudBusIN, ManagementNodeChange
 
     private void setThreadLoggingContext(Message msg) {
         if (msg instanceof APIMessage) {
-            ThreadContext.put("api", msg.getId());
+            ThreadContext.put(Constants.THREAD_CONTEXT_API, msg.getId());
         } else if (msg.getHeaders().containsKey(API_ID)){
-            ThreadContext.put("api", msg.getHeaders().get(API_ID).toString());
+            ThreadContext.put(Constants.THREAD_CONTEXT_API, msg.getHeaders().get(API_ID).toString());
         } else {
             ThreadContext.clearMap();
         }

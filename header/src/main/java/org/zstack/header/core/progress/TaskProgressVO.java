@@ -1,5 +1,8 @@
 package org.zstack.header.core.progress;
 
+import org.zstack.header.managementnode.ManagementNodeVO;
+import org.zstack.header.vo.*;
+
 import javax.persistence.*;
 
 /**
@@ -15,11 +18,9 @@ public class TaskProgressVO {
     @Column
     private String taskUuid;
     @Column
-    private String taskName;
+    private String apiId;
     @Column
     private String parentUuid;
-    @Column
-    private String subTaskUuid;
     @Column
     @Enumerated(EnumType.STRING)
     private TaskType type;
@@ -30,7 +31,18 @@ public class TaskProgressVO {
     @Column
     private String opaque;
     @Column
+    @org.zstack.header.vo.ForeignKey(parentEntityClass = ManagementNodeVO.class, parentKey = "uuid")
+    private String managementUuid;
+    @Column
     private long time;
+
+    public String getManagementUuid() {
+        return managementUuid;
+    }
+
+    public void setManagementUuid(String managementUuid) {
+        this.managementUuid = managementUuid;
+    }
 
     public String getArguments() {
         return arguments;
@@ -56,14 +68,6 @@ public class TaskProgressVO {
         this.taskUuid = taskUuid;
     }
 
-    public String getTaskName() {
-        return taskName;
-    }
-
-    public void setTaskName(String taskName) {
-        this.taskName = taskName;
-    }
-
     public String getParentUuid() {
         return parentUuid;
     }
@@ -72,12 +76,12 @@ public class TaskProgressVO {
         this.parentUuid = parentUuid;
     }
 
-    public String getSubTaskUuid() {
-        return subTaskUuid;
+    public String getApiId() {
+        return apiId;
     }
 
-    public void setSubTaskUuid(String subTaskUuid) {
-        this.subTaskUuid = subTaskUuid;
+    public void setApiId(String apiId) {
+        this.apiId = apiId;
     }
 
     public TaskType getType() {

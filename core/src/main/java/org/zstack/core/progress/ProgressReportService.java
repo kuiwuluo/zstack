@@ -3,6 +3,7 @@ package org.zstack.core.progress;
 import org.apache.logging.log4j.ThreadContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.zstack.core.Platform;
 import org.zstack.core.cloudbus.CloudBus;
 import org.zstack.core.cloudbus.MessageSafe;
 import org.zstack.core.db.DatabaseFacade;
@@ -10,6 +11,7 @@ import org.zstack.core.db.SimpleQuery;
 import org.zstack.core.errorcode.ErrorFacade;
 import org.zstack.core.progress.ProgressCommands.ProgressReportCmd;
 import org.zstack.header.AbstractService;
+import org.zstack.header.Constants;
 import org.zstack.header.core.progress.*;
 import org.zstack.header.errorcode.OperationFailureException;
 import org.zstack.header.managementnode.ManagementNodeReadyExtensionPoint;
@@ -18,11 +20,14 @@ import org.zstack.header.message.Message;
 import org.zstack.header.rest.RESTFacade;
 import org.zstack.header.rest.SyncHttpCallHandler;
 import org.zstack.utils.Utils;
+import org.zstack.utils.gson.JSONObjectUtil;
 import org.zstack.utils.logging.CLogger;
 
 import static org.zstack.core.Platform.operr;
 
 import java.util.List;
+
+import static java.util.Arrays.asList;
 
 
 /**
@@ -234,5 +239,82 @@ public class ProgressReportService extends AbstractService implements Management
             reply.setResourceUuid(vo.getResourceUuid());
         }
         bus.reply(msg, reply);
+    }
+
+    private static String getTaskUuid() {
+        return ThreadContext.peek();
+    }
+
+    private static String getParentUuid() {
+        if (ThreadContext.getImmutableStack().isEmpty()) {
+            return null;
+        }
+
+        if (ThreadContext.getImmutableStack().size() == 1) {
+            String uuid = ThreadContext.get(Constants.THREAD_CONTEXT_API);
+            assert uuid != null;
+            return uuid;
+        }
+
+        List<String> lst = ThreadContext.getImmutableStack().asList();
+        return lst.get(lst.size()-2);
+    }
+
+    public static void createSubTaskProgress(String fmt, Object...args) {
+        if (!ThreadContext.containsKey(Constants.THREAD_CONTEXT_API)) {
+            if (args != null) {
+                logger.warn(String.format("no task uuid found for:" + fmt, args));
+            } else {
+                logger.warn("no task uuid found for:" + fmt);
+            }
+            return;
+        }
+
+        String parentUuid = getParentUuid();
+        String taskUuid = Platform.getUuid();
+        ThreadContext.push(taskUuid);
+        ThreadContext.push(Platform.getUuid());
+
+        TaskProgressVO vo = new TaskProgressVO();
+        vo.setApiId(ThreadContext.get(Constants.THREAD_CONTEXT_API));
+        vo.setTaskUuid(taskUuid);
+        vo.setParentUuid(parentUuid);
+        vo.setContent(fmt);
+        if (args != null) {
+            vo.setArguments(JSONObjectUtil.toJsonString(args));
+        }
+        vo.setType(TaskType.Task);
+        vo.setTime(System.currentTimeMillis());
+
+        Platform.getComponentLoader().getComponent(DatabaseFacade.class).persist(vo);
+    }
+
+    public static void taskProgress(String fmt, Object...args) {
+        if (!ThreadContext.containsKey(Constants.THREAD_CONTEXT_API)) {
+            if (args != null) {
+                logger.warn(String.format("no task uuid found for:" + fmt, args));
+            } else {
+                logger.warn("no task uuid found for:" + fmt);
+            }
+            return;
+        }
+
+        String taskUuid = getTaskUuid();
+        if (taskUuid.isEmpty()) {
+            taskUuid = Platform.getUuid();
+        }
+
+        TaskProgressVO vo = new TaskProgressVO();
+        vo.setApiId(ThreadContext.get(Constants.THREAD_CONTEXT_API));
+        vo.setTaskUuid(taskUuid);
+        vo.setParentUuid(getParentUuid());
+        vo.setContent(fmt);
+        if (args != null) {
+            vo.setArguments(JSONObjectUtil.toJsonString(args));
+        }
+        vo.setType(TaskType.Task);
+        vo.setTime(System.currentTimeMillis());
+
+        Platform.getComponentLoader().getComponent(DatabaseFacade.class).persist(vo);
     }
 }
