@@ -7,6 +7,8 @@ import org.zstack.core.Platform;
 import org.zstack.core.cloudbus.CloudBus;
 import org.zstack.core.cloudbus.MessageSafe;
 import org.zstack.core.db.DatabaseFacade;
+import org.zstack.core.db.Q;
+import org.zstack.core.db.SQLBatch;
 import org.zstack.core.db.SimpleQuery;
 import org.zstack.core.errorcode.ErrorFacade;
 import org.zstack.core.progress.ProgressCommands.ProgressReportCmd;
@@ -24,8 +26,13 @@ import org.zstack.utils.gson.JSONObjectUtil;
 import org.zstack.utils.logging.CLogger;
 
 import static org.zstack.core.Platform.operr;
+import static org.zstack.core.Platform.toI18nString;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.codehaus.groovy.runtime.InvokerHelper.asList;
+import static org.codehaus.groovy.runtime.InvokerHelper.assertFailed;
 
 
 /**
@@ -217,6 +224,8 @@ public class ProgressReportService extends AbstractService implements Management
         try {
             if (msg instanceof APIGetTaskProgressMsg1) {
                 handle((APIGetTaskProgressMsg1) msg);
+            } else if (msg instanceof APIGetTaskProgressMsg) {
+                handle((APIGetTaskProgressMsg) msg);
             } else {
                 bus.dealWithUnknownMessage(msg);
             }
@@ -224,6 +233,114 @@ public class ProgressReportService extends AbstractService implements Management
             bus.logExceptionWithMessageDump(msg, e);
             bus.replyErrorByMessageType(msg, e);
         }
+    }
+
+    private void handle(APIGetTaskProgressMsg msg) {
+        APIGetTaskProgressReply reply = new APIGetTaskProgressReply();
+
+        new SQLBatch() {
+            @Override
+            protected void scripts() {
+                if (msg.isAll()) {
+                    replyAllProgress();
+                } else {
+                    replyLastProgress();
+                }
+            }
+
+            private TaskProgressInventory inventory(TaskProgressVO vo) {
+                TaskProgressInventory inv = new TaskProgressInventory(vo);
+                if (vo.getArguments() == null) {
+                    inv.setContent(toI18nString(vo.getContent()));
+                } else {
+                    List<String> args = JSONObjectUtil.toCollection(vo.getArguments(), ArrayList.class, String.class);
+                    inv.setContent(toI18nString(vo.getContent(), args.toArray()));
+                }
+
+                return inv;
+            }
+
+            private void replyLastProgress() {
+                TaskProgressVO vo = Q.New(TaskProgressVO.class)
+                        .eq(TaskProgressVO_.apiId, msg.getApiId())
+                        .orderBy(TaskProgressVO_.time, SimpleQuery.Od.DESC)
+                        .limit(1)
+                        .find();
+
+                if (vo == null) {
+                    reply.setInventories(new ArrayList<>());
+                    return;
+                }
+
+                if (vo.getParentUuid() == null) {
+                    reply.setInventories(asList(inventory(vo)));
+                    return;
+                }
+
+                Stack<TaskProgressInventory> invs = new Stack<>();
+                invs.push(inventory(vo));
+
+                while (vo.getParentUuid() != null) {
+                    vo = Q.New(TaskProgressVO.class)
+                            .eq(TaskProgressVO_.apiId, msg.getApiId())
+                            .eq(TaskProgressVO_.parentUuid, vo.getParentUuid())
+                            .orderBy(TaskProgressVO_.time, SimpleQuery.Od.DESC)
+                            .limit(1)
+                            .find();
+
+                    if (vo == null) {
+                        break;
+                    }
+
+                    invs.push(inventory(vo));
+                }
+
+                reply.setInventories(invs);
+            }
+
+            private void replyAllProgress() {
+                List<TaskProgressVO> vos = Q.New(TaskProgressVO.class).eq(TaskProgressVO_.apiId, msg.getApiId()).list();
+                if (vos.isEmpty()) {
+                    reply.setInventories(new ArrayList<>());
+                    return;
+                }
+
+                List<TaskProgressInventory> invs = vos.stream().map(this::inventory).collect(Collectors.toList());
+                Map<String, List<TaskProgressInventory>> map = new HashMap<>();
+                String nullKey = "null";
+                for (TaskProgressInventory inv : invs) {
+                    String key = inv.getParentUuid() == null ? nullKey : inv.getParentUuid();
+                    List<TaskProgressInventory> lst = map.get(nullKey);
+                    if (lst == null) {
+                        lst = new ArrayList<>();
+                        map.put(key, lst);
+                    }
+
+                    lst.add(inv);
+                }
+
+                // sort by time with DESC
+                for (Map.Entry<String, List<TaskProgressInventory>> e : map.entrySet()) {
+                    e.getValue().sort((o1, o2) -> (int) (o1.getTime() - o2.getTime()));
+                }
+
+                for (Map.Entry<String, List<TaskProgressInventory>> e : map.entrySet()) {
+                    if (e.getKey().equals(nullKey)) {
+                        continue;
+                    }
+
+                    List<TaskProgressInventory> lst = e.getValue();
+                    Optional<TaskProgressInventory> opt = invs.stream().filter(it -> it.getParentUuid().equals(e.getKey())).findAny();
+                    assert opt.isPresent();
+                    TaskProgressInventory inv = opt.get();
+                    inv.setSubTasks(lst);
+                }
+
+                reply.setInventories(map.get(nullKey));
+            }
+        }.execute();
+
+        bus.reply(msg, reply);
     }
 
     private void handleLocalMessage(Message msg) {

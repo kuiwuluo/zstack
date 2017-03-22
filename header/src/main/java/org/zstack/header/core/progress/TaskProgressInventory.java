@@ -18,6 +18,7 @@ public class TaskProgressInventory {
     private LinkedHashMap opaque;
     private Long time;
     private List<TaskProgressInventory> subTasks;
+    private Long total;
 
     public TaskProgressInventory() {
     }
@@ -30,6 +31,14 @@ public class TaskProgressInventory {
             opaque = JSONObjectUtil.toObject(vo.getOpaque(), LinkedHashMap.class);
         }
         time = vo.getTime();
+    }
+
+    public Long getTotal() {
+        return total;
+    }
+
+    public void setTotal(Long total) {
+        this.total = total;
     }
 
     public List<TaskProgressInventory> getSubTasks() {

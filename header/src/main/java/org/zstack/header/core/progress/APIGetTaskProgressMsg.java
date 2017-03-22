@@ -7,6 +7,15 @@ import org.zstack.header.message.APISyncCallMessage;
  */
 public class APIGetTaskProgressMsg extends APISyncCallMessage {
     private String apiId;
+    private boolean all;
+
+    public boolean isAll() {
+        return all;
+    }
+
+    public void setAll(boolean all) {
+        this.all = all;
+    }
 
     public String getApiId() {
         return apiId;
